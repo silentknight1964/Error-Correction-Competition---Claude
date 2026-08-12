@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grammar Escape Room</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Creepster&family=Special+Elite&family=Crimson+Pro:wght@400;600;700&display=swap');
+
+        :root {
+            --glow-green: #39ff14;
+            --glow-amber: #ffbf00;
+            --glow-red: #ff3131;
+            --bg-dark: #0a0e17;
+            --bg-panel: #111827;
+            --bg-panel2: #1a2236;
+            --text-primary: #e2e8f0;
+            --text-dim: #94a3b8;
+            --accent: #22d3ee;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Crimson Pro', serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ── ANIMATED BACKGROUND ── */
+        #bg-canvas {
+            position: fixed; inset: 0; z-index: 0;
+            pointer-events: none;
+        }
+
+        .fog {
+            position: fixed; inset: 0; z-index: 1; pointer-events: none;
+            background:
+                radial-gradient(ellipse at 20% 80%, rgba(34,211,238,0.04) 0%, transparent 50%),
+                radial-gradient(ellipse at 80% 20%, rgba(139,92,246,0.05) 0%, transparent 50%);
+            animation: fogDrift 12s ease-in-out infinite alternate;
+        }
+        @keyframes fogDrift {
+            0% { opacity: .6; transform: translateX(-15px); }
+            100% { opacity: 1; transform: translateX(15px); }
+        }
+
+        /* ── UTILITIES ── */
+        .escape-container {
+            position: relative; z-index: 2;
+            max-width: 800px; width: 100%; margin: 0 auto; padding: 16px;
+            min-height: 100vh; display: flex; flex-direction: column; justify-content: center;
+        }
+
+        .panel {
+            background: linear-gradient(135deg, var(--bg-panel) 0%, var(--bg-panel2) 100%);
+            border: 1px solid rgba(34,211,238,0.15);
+            border-radius: 16px;
+            box-shadow: 0 0 40px rgba(34,211,238,0.06), inset 0 1px 0 rgba(255,255,255,0.04);
+            backdrop-filter: blur(8px);
+        }
+
+        .glow-border {
+            position: relative;
+        }
+        .glow-border::before {
+            content: ''; position: absolute; inset: -2px; border-radius: 18px; z-index: -1;
+            background: conic-gradient(from 0deg, transparent, rgba(34,211,238,0.3), transparent, rgba(139,92,246,0.3), transparent);
+            animation: borderSpin 8s linear infinite;
+        }
+        @keyframes borderSpin {
+            to { transform: rotate(360deg); }
+        }
+
+        .title-font { font-family: 'Creepster', cursive; letter-spacing: 3px; }
+        .typewriter-font { font-family: 'Special Elite', cursive; }
+
+        /* ── GLOWING TEXT ── */
+        .glow-text {
+            text-shadow: 0 0 10px rgba(34,211,238,0.6), 0 0 30px rgba(34,211,238,0.3);
+        }
+        .glow-green { text-shadow: 0 0 10px rgba(57,255,20,0.6), 0 0 30px rgba(57,255,20,0.3); color: var(--glow-green); }
+        .glow-red { text-shadow: 0 0 10px rgba(255,49,49,0.6), 0 0 30px rgba(255,49,49,0.3); color: var(--glow-red); }
+        .glow-amber { text-shadow: 0 0 10px rgba(255,191,0,0.6), 0 0 30px rgba(255,191,0,0.3); color: var(--glow-amber); }
+
+        /* ── INPUT STYLES ── */
+        .escape-input {
+            background: rgba(15,23,42,0.8);
+            border: 1px solid rgba(34,211,238,0.2);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: 12px 16px;
+            width: 100%;
+            font-family: 'Crimson Pro', serif;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .escape-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 15px rgba(34,211,238,0.15);
+        }
+        .escape-input::placeholder { color: #475569; }
+        .escape-input[type="file"] {
+            padding: 8px;
+            cursor: pointer;
+        }
+        .escape-input[type="file"]::-webkit-file-upload-button {
+            background: rgba(34,211,238,0.15);
+            border: 1px solid rgba(34,211,238,0.3);
+            color: var(--accent);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Crimson Pro', serif;
+            cursor: pointer;
+            margin-right: 12px;
+            transition: all 0.3s;
+        }
+        .escape-input[type="file"]::-webkit-file-upload-button:hover {
+            background: rgba(34,211,238,0.25);
+        }
+
+        /* ── BUTTONS ── */
+        .btn-primary {
+            background: linear-gradient(135deg, rgba(34,211,238,0.2) 0%, rgba(139,92,246,0.2) 100%);
+            border: 1px solid rgba(34,211,238,0.4);
+            color: var(--accent);
+            font-family: 'Special Elite', cursive;
+            font-size: 18px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: linear-gradient(135deg, rgba(34,211,238,0.35) 0%, rgba(139,92,246,0.35) 100%);
+            box-shadow: 0 0 25px rgba(34,211,238,0.2);
+            transform: translateY(-1px);
+        }
+        .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-hint {
+            background: rgba(255,191,0,0.08);
+            border: 1px solid rgba(255,191,0,0.25);
+            color: var(--glow-amber);
+            font-family: 'Special Elite', cursive;
+            font-size: 14px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            flex: 1;
+            text-align: center;
+        }
+        .btn-hint:hover:not(:disabled) {
+            background: rgba(255,191,0,0.15);
+            box-shadow: 0 0 15px rgba(255,191,0,0.1);
+        }
+        .btn-hint:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .btn-reveal {
+            background: rgba(255,49,49,0.08);
+            border: 1px solid rgba(255,49,49,0.25);
+            color: var(--glow-red);
+        }
+        .btn-reveal:hover:not(:disabled) {
+            background: rgba(255,49,49,0.15);
+            box-shadow: 0 0 15px rgba(255,49,49,0.1);
+        }
+
+        .btn-next {
+            background: linear-gradient(135deg, rgba(57,255,20,0.15) 0%, rgba(34,211,238,0.15) 100%);
+            border: 1px solid rgba(57,255,20,0.4);
+            color: var(--glow-green);
+        }
+        .btn-next:hover { box-shadow: 0 0 25px rgba(57,255,20,0.15); }
+
+        /* ── DOOR / LOCK ANIMATION ── */
+        .lock-icon {
+            width: 60px; height: 60px; margin: 0 auto 16px;
+            position: relative;
+        }
+        .lock-body {
+            width: 44px; height: 34px; background: rgba(34,211,238,0.2);
+            border: 2px solid var(--accent); border-radius: 6px;
+            margin: 0 auto; position: relative; top: 20px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .lock-body::before {
+            content: ''; width: 8px; height: 8px;
+            background: var(--accent); border-radius: 50%;
+            box-shadow: 0 0 8px var(--accent);
+        }
+        .lock-shackle {
+            width: 26px; height: 20px;
+            border: 3px solid var(--accent); border-bottom: none;
+            border-radius: 13px 13px 0 0;
+            margin: 0 auto;
+            transition: all 0.5s;
+        }
+        .lock-shackle.unlocked {
+            transform: translateY(-6px) rotate(15deg) translateX(6px);
+            border-color: var(--glow-green);
+        }
+        .lock-body.unlocked {
+            border-color: var(--glow-green);
+            background: rgba(57,255,20,0.15);
+        }
+        .lock-body.unlocked::before {
+            background: var(--glow-green);
+            box-shadow: 0 0 8px var(--glow-green);
+        }
+
+        /* ── ROOM PROGRESS DOORS ── */
+        .room-track {
+            display: flex; gap: 3px; align-items: center;
+            overflow-x: auto; padding: 8px 0;
+        }
+        .room-dot {
+            width: 24px; height: 28px;
+            border: 1px solid rgba(34,211,238,0.2);
+            border-radius: 4px 4px 0 0;
+            background: rgba(15,23,42,0.6);
+            position: relative;
+            flex-shrink: 0;
+            transition: all 0.4s;
+        }
+        .room-dot::after {
+            content: ''; position: absolute;
+            width: 4px; height: 4px; border-radius: 50%;
+            background: rgba(34,211,238,0.3);
+            right: 4px; top: 50%;
+        }
+        .room-dot.solved {
+            border-color: rgba(57,255,20,0.4);
+            background: rgba(57,255,20,0.1);
+            box-shadow: 0 0 8px rgba(57,255,20,0.1);
+        }
+        .room-dot.solved::after { background: var(--glow-green); }
+        .room-dot.active {
+            border-color: var(--accent);
+            background: rgba(34,211,238,0.1);
+            box-shadow: 0 0 10px rgba(34,211,238,0.15);
+            transform: scaleY(1.1);
+        }
+        .room-dot.active::after { background: var(--accent); box-shadow: 0 0 4px var(--accent); }
+        .room-dot.failed {
+            border-color: rgba(255,49,49,0.3);
+            background: rgba(255,49,49,0.08);
+        }
+        .room-dot.failed::after { background: var(--glow-red); }
+
+        /* ── QUESTION DISPLAY ── */
+        .question-cell {
+            background: rgba(255,49,49,0.04);
+            border: 1px solid rgba(255,49,49,0.15);
+            border-radius: 12px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .question-cell::before {
+            content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,49,49,0.4), transparent);
+        }
+
+        /* ── FEEDBACK ── */
+        .feedback { border-radius: 12px; padding: 16px; text-align: center; font-size: 18px; }
+        .feedback-success {
+            background: rgba(57,255,20,0.08);
+            border: 1px solid rgba(57,255,20,0.3);
+            color: var(--glow-green);
+        }
+        .feedback-error {
+            background: rgba(255,49,49,0.08);
+            border: 1px solid rgba(255,49,49,0.3);
+            color: var(--glow-red);
+        }
+        .feedback-warning {
+            background: rgba(255,191,0,0.08);
+            border: 1px solid rgba(255,191,0,0.3);
+            color: var(--glow-amber);
+        }
+
+        /* ── ANIMATIONS ── */
+        .fade-in {
+            animation: fadeSlideIn 0.5s ease-out;
+        }
+        @keyframes fadeSlideIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .shake {
+            animation: shakeAnim 0.4s ease-in-out;
+        }
+        @keyframes shakeAnim {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        .door-open {
+            animation: doorSwing 0.8s ease-out;
+        }
+        @keyframes doorSwing {
+            0% { transform: perspective(600px) rotateY(0); }
+            100% { transform: perspective(600px) rotateY(-30deg); opacity: 0.5; }
+        }
+
+        .pulse-glow {
+            animation: pulseGlow 2s ease-in-out infinite;
+        }
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(34,211,238,0.1); }
+            50% { box-shadow: 0 0 30px rgba(34,211,238,0.25); }
+        }
+
+        @keyframes unlockBurst {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.3); opacity: 0.7; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .unlock-burst { animation: unlockBurst 0.6s ease-out; }
+
+        /* ── PARTICLES ── */
+        .particle {
+            position: fixed; width: 2px; height: 2px;
+            background: var(--accent); border-radius: 50%;
+            pointer-events: none; z-index: 0;
+            opacity: 0;
+            animation: particleFloat 6s linear infinite;
+        }
+        @keyframes particleFloat {
+            0% { opacity: 0; transform: translateY(100vh) scale(0); }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.2; }
+            100% { opacity: 0; transform: translateY(-20px) scale(1); }
+        }
+
+        /* ── CERTIFICATE ── */
+        .certificate {
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            border: 2px solid rgba(34,211,238,0.3);
+            border-radius: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .certificate::before {
+            content: ''; position: absolute; inset: 8px;
+            border: 1px solid rgba(34,211,238,0.1);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+        .certificate::after {
+            content: ''; position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 50% 0%, rgba(34,211,238,0.08) 0%, transparent 60%);
+            pointer-events: none;
+        }
+
+        /* ── HINT DISPLAY ── */
+        .hint-box {
+            background: rgba(255,191,0,0.05);
+            border: 1px solid rgba(255,191,0,0.15);
+            border-radius: 10px;
+            padding: 14px;
+            color: var(--glow-amber);
+            font-family: 'Special Elite', cursive;
+        }
+
+        /* ── TEACHER PANEL ── */
+        .teacher-panel {
+            background: rgba(139,92,246,0.08);
+            border: 1px solid rgba(139,92,246,0.2);
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 14px;
+            color: #c4b5fd;
+        }
+
+        /* ── STAT BADGE ── */
+        .stat-badge {
+            background: rgba(15,23,42,0.6);
+            border: 1px solid rgba(34,211,238,0.15);
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-family: 'Special Elite', cursive;
+            font-size: 14px;
+        }
+
+        /* ── SCROLLBAR ── */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(34,211,238,0.2); border-radius: 3px; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width: 640px) {
+            .title-font { font-size: 24px !important; }
+            .room-dot { width: 18px; height: 22px; }
+        }
+
+        /* ── KEY SPARKLE on correct ── */
+        .sparkle-container {
+            position: fixed; inset: 0; pointer-events: none; z-index: 100;
+        }
+        .sparkle {
+            position: absolute; width: 6px; height: 6px;
+            border-radius: 50%;
+            animation: sparklePop 1s ease-out forwards;
+        }
+        @keyframes sparklePop {
+            0% { transform: scale(0) translate(0,0); opacity: 1; }
+            100% { transform: scale(1) translate(var(--tx), var(--ty)); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Floating particles -->
+<div id="bg-canvas"></div>
+<div class="fog"></div>
+
+<!-- Sparkle container for correct answer effects -->
+<div class="sparkle-container" id="sparkle-container"></div>
+
+<div class="escape-container">
+
+    <!-- ════════════════ SCREEN 1: SETUP ════════════════ -->
+    <div id="screen-setup" class="fade-in">
+        <div class="panel glow-border p-8 md:p-10">
+            <!-- Lock icon -->
+            <div class="lock-icon mb-2">
+                <div class="lock-shackle"></div>
+                <div class="lock-body"></div>
+            </div>
+
+            <h1 class="title-font text-3xl md:text-4xl text-center glow-text mb-2" style="color: var(--accent);">
+                Grammar Escape Room
+            </h1>
+            <p class="text-center text-sm mb-8 typewriter-font" style="color: var(--text-dim);">
+                Crack the code. Fix the sentences. Escape!
+            </p>
+
+            <div class="space-y-5 max-w-md mx-auto w-full">
+                <div>
+                    <label class="block text-xs uppercase tracking-wider mb-2 typewriter-font" style="color: var(--text-dim);">Agent Name</label>
+                    <input type="text" id="student-name" placeholder="Enter your codename..." class="escape-input">
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider mb-2 typewriter-font" style="color: var(--text-dim);">Mission File (JSON)</label>
+                    <input type="file" id="json-upload" accept=".json" class="escape-input">
+                </div>
+
+                <div>
+                    <label class="block text-xs uppercase tracking-wider mb-2 typewriter-font" style="color: var(--text-dim);">Room Range</label>
+                    <div class="flex items-center gap-3">
+                        <input type="number" id="range-start" min="1" value="1" class="escape-input text-center">
+                        <span style="color: var(--accent);" class="text-lg">→</span>
+                        <input type="number" id="range-end" min="1" value="10" class="escape-input text-center">
+                    </div>
+                    <p class="text-xs mt-2 typewriter-font" style="color:#475569;">Select which rooms to enter (e.g., Room 1 → Room 10).</p>
+                </div>
+
+                <button id="btn-help" type="button" class="btn-primary w-full" style="border-color: rgba(255,191,0,0.35); color: var(--glow-amber); background: rgba(255,191,0,0.07);">
+                    ❓ HELP
+                </button>
+
+                <button id="btn-prompt-access" type="button" class="btn-primary w-full" style="border-color: rgba(167,139,250,0.45); color:#c4b5fd; background: rgba(139,92,246,0.08);">
+                    🤖 JSON GENERATOR PROMPT
+                </button>
+
+                <button id="btn-start" class="btn-primary w-full pulse-glow">
+                    🔓 Enter the Escape Room
+                </button>
+                <div id="setup-error" class="text-center text-sm hidden" style="color: var(--glow-red);"></div>
+
+                <div style="border-top: 1px solid rgba(34,211,238,0.1);" class="pt-4 mt-4">
+                    <label class="block text-xs uppercase tracking-wider mb-2 typewriter-font" style="color:#475569;">Gamemaster Access</label>
+                    <input type="password" id="teacher-password" placeholder="Gamemaster password..." class="escape-input text-sm">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ PROMPT PASSWORD MODAL ════════════════ -->
+    <div id="prompt-password-modal" class="hidden fixed inset-0 z-[135] bg-black/85 backdrop-blur-sm p-4 items-center justify-center">
+        <div class="panel glow-border w-full max-w-sm p-6">
+            <div class="flex justify-between items-start gap-4 mb-5">
+                <div>
+                    <p class="typewriter-font text-xs uppercase tracking-widest mb-1" style="color:#a78bfa;">Gamemaster Tool</p>
+                    <h2 class="title-font text-2xl glow-text" style="color:#c4b5fd;">Prompt Access</h2>
+                </div>
+                <button id="btn-close-prompt-password" type="button" class="btn-primary" style="padding:8px 14px; min-width:auto;" aria-label="Close prompt access">×</button>
+            </div>
+
+            <label class="block text-xs uppercase tracking-wider mb-2 typewriter-font" style="color:var(--text-dim);">Enter prompt password</label>
+            <input type="password" id="prompt-password-input" class="escape-input" placeholder="Password">
+
+            <div id="prompt-password-error" class="feedback feedback-error hidden mt-4 typewriter-font" style="font-size:14px;">
+                Incorrect password.
+            </div>
+
+            <button id="btn-unlock-prompt" type="button" class="btn-primary w-full mt-5" style="border-color: rgba(167,139,250,0.45); color:#c4b5fd; background: rgba(139,92,246,0.10);">
+                Unlock Prompt
+            </button>
+        </div>
+    </div>
+
+    <!-- ════════════════ JSON GENERATOR PROMPT MODAL ════════════════ -->
+    <div id="json-prompt-modal" class="hidden fixed inset-0 z-[140] bg-black/85 backdrop-blur-sm p-4 items-center justify-center">
+        <div class="panel glow-border w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div class="p-5 md:p-6 flex items-start justify-between gap-4" style="border-bottom:1px solid rgba(139,92,246,0.22);">
+                <div>
+                    <p class="typewriter-font text-xs uppercase tracking-widest mb-1" style="color:#a78bfa;">Gamemaster Tool</p>
+                    <h2 class="title-font text-2xl md:text-3xl glow-text" style="color:#c4b5fd;">JSON Generator Prompt</h2>
+                    <p class="text-sm mt-2" style="color:var(--text-dim);">Copy this prompt into ChatGPT or another AI tool to generate compatible error-correction JSON files.</p>
+                </div>
+                <button id="btn-close-json-prompt" type="button" class="btn-primary" style="padding:8px 14px; min-width:auto;" aria-label="Close prompt">×</button>
+            </div>
+
+            <div class="p-5 md:p-6 overflow-y-auto">
+                <pre id="json-generator-prompt-text" class="whitespace-pre-wrap panel p-5 text-sm md:text-base" style="color:var(--text-primary); font-family:monospace; line-height:1.6;"></pre>
+            </div>
+
+            <div class="p-5 md:p-6 flex flex-col sm:flex-row gap-3 sm:items-center" style="border-top:1px solid rgba(139,92,246,0.22);">
+                <span id="prompt-copy-status" class="hidden sm:mr-auto typewriter-font text-sm glow-green">Prompt copied.</span>
+                <button id="btn-copy-prompt" type="button" class="btn-primary" style="border-color: rgba(167,139,250,0.45); color:#c4b5fd; background: rgba(139,92,246,0.10);">📋 Copy Prompt</button>
+                <button id="btn-close-json-prompt-bottom" type="button" class="btn-primary">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ HELP MODAL ════════════════ -->
+    <div id="help-modal" class="hidden fixed inset-0 z-[120] bg-black/80 backdrop-blur-sm p-4 items-center justify-center">
+        <div class="panel glow-border w-full max-w-4xl max-h-[92vh] overflow-hidden flex flex-col">
+            <div class="p-5 md:p-6 flex items-start justify-between gap-4" style="border-bottom:1px solid rgba(34,211,238,0.12);">
+                <div>
+                    <p class="typewriter-font text-xs uppercase tracking-widest mb-1" style="color:var(--glow-amber);">Mission Guide</p>
+                    <h2 class="title-font text-2xl md:text-3xl glow-text" style="color:var(--accent);">HELP — Grammar Escape Room</h2>
+                    <p class="text-sm mt-2" style="color:var(--text-dim);">A guide to the game, controls, scoring, clues and teacher functions.</p>
+                </div>
+                <button id="btn-close-help" type="button" class="btn-primary" style="padding:8px 14px; min-width:auto;" aria-label="Close Help">×</button>
+            </div>
+
+            <div class="p-5 md:p-6 overflow-y-auto space-y-5" style="color:var(--text-primary);">
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">🔐 What is Grammar Escape Room?</h3>
+                    <p class="leading-relaxed" style="color:var(--text-dim);">
+                        Grammar Escape Room is an individual English error-correction challenge. Each faulty sentence is treated as a locked room.
+                        The player must type the complete corrected sentence to unlock the room, gain energy points and progress through the mission.
+                    </p>
+                    <p class="leading-relaxed mt-3" style="color:var(--text-dim);">
+                        The game records score, total time, clue use and per-question performance. At the end, the player receives an Escape Certificate
+                        and can download a detailed performance JSON file.
+                    </p>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">⚙️ Setup Screen</h3>
+                    <div class="space-y-3" style="color:var(--text-dim);">
+                        <p><strong style="color:var(--accent);">Agent Name:</strong> Enter the student's name or codename. It appears on the final certificate and exported results.</p>
+                        <p><strong style="color:var(--accent);">Mission File (JSON):</strong> Upload a compatible JSON file containing the incorrect sentences, correct answers and hints.</p>
+                        <p><strong style="color:var(--accent);">Room Range:</strong> Choose which numbered items to play. For example, 1 → 10 plays the first ten rooms only.</p>
+                        <p><strong style="color:var(--accent);">Gamemaster Access:</strong> Enter the teacher password to activate the hidden teacher information panel during gameplay.</p>
+                        <p><strong style="color:var(--accent);">HELP:</strong> Opens this guide.</p>
+                        <p><strong style="color:var(--accent);">Enter the Escape Room:</strong> Starts the selected mission after a valid name, file and room range are provided.</p>
+                    </div>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">🧩 How to Solve a Room</h3>
+                    <div class="space-y-3" style="color:var(--text-dim);">
+                        <p>The faulty sentence appears in the central question cell.</p>
+                        <p>Type the <strong style="color:var(--text-primary);">complete corrected sentence</strong> in the answer box.</p>
+                        <p>Press <strong style="color:var(--accent);">⚡ Attempt Unlock</strong> to check your answer.</p>
+                        <p>If correct, the lock opens, the room is marked as solved, and the <strong style="color:var(--glow-green);">Next Room →</strong> button appears.</p>
+                        <p>If incorrect, the lock resists and you may try again.</p>
+                        <p>The checker ignores capitalization differences, repeated spaces and final sentence punctuation.</p>
+                    </div>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">⚡ Scoring & Energy</h3>
+                    <div class="grid sm:grid-cols-2 gap-3">
+                        <div class="stat-badge p-3 rounded-xl">
+                            <div class="glow-green font-bold">Correct answer</div>
+                            <div class="text-sm mt-1" style="color:var(--text-dim);">+1 point</div>
+                        </div>
+                        <div class="stat-badge p-3 rounded-xl">
+                            <div class="glow-red font-bold">Incorrect attempt</div>
+                            <div class="text-sm mt-1" style="color:var(--text-dim);">−1 point</div>
+                        </div>
+                        <div class="stat-badge p-3 rounded-xl">
+                            <div class="glow-amber font-bold">Clue 1</div>
+                            <div class="text-sm mt-1" style="color:var(--text-dim);">−1 point</div>
+                        </div>
+                        <div class="stat-badge p-3 rounded-xl">
+                            <div class="glow-amber font-bold">Clue 2</div>
+                            <div class="text-sm mt-1" style="color:var(--text-dim);">−1 point</div>
+                        </div>
+                        <div class="stat-badge p-3 rounded-xl sm:col-span-2">
+                            <div class="glow-red font-bold">Force Open</div>
+                            <div class="text-sm mt-1" style="color:var(--text-dim);">−2 points; the correct answer is revealed automatically.</div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">🗝️ Clue System</h3>
+                    <div class="space-y-3" style="color:var(--text-dim);">
+                        <p><strong style="color:var(--glow-amber);">Clue 1:</strong> Gives the first, gentler hint from the JSON file.</p>
+                        <p><strong style="color:var(--glow-amber);">Clue 2:</strong> Unlocks only after Clue 1 and provides a stronger explanation.</p>
+                        <p><strong style="color:var(--glow-red);">Force Open:</strong> Unlocks after Clue 2. It fills in the correct sentence and marks the room as failed rather than independently solved.</p>
+                        <p>Hints must therefore be used in order; stronger help cannot be selected immediately.</p>
+                    </div>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">🚪 Room Progress</h3>
+                    <p class="leading-relaxed" style="color:var(--text-dim);">
+                        The row of door-shaped indicators shows the current mission progress. The active room is highlighted, solved rooms turn green,
+                        and rooms opened with Force Open are marked as failed.
+                    </p>
+                    <p class="leading-relaxed mt-3" style="color:var(--text-dim);">
+                        The top bar also shows the current score, elapsed time and room number.
+                    </p>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">👨‍🏫 Gamemaster Access</h3>
+                    <p class="leading-relaxed" style="color:var(--text-dim);">
+                        When the correct Gamemaster password is entered on the setup screen, a hidden teacher panel becomes visible during gameplay.
+                        It shows the stored correct sentence, Hint 1 and Hint 2 for the current item.
+                    </p>
+                    <p class="leading-relaxed mt-3" style="color:var(--text-dim);">
+                        This mode is intended for classroom supervision and checking. In normal student mode, these answers remain hidden.
+                    </p>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">🏆 Escape Certificate</h3>
+                    <div class="space-y-3" style="color:var(--text-dim);">
+                        <p>After the last room, the final screen shows <strong style="color:var(--accent);">Energy</strong>, <strong style="color:var(--accent);">Time</strong>, <strong style="color:var(--accent);">Accuracy</strong> and <strong style="color:var(--accent);">Clues Used</strong>.</p>
+                        <p>Accuracy counts rooms solved independently. A room opened with Force Open is not counted as independently solved.</p>
+                        <p>The app also awards an <strong style="color:var(--glow-green);">Escape Rank</strong>:</p>
+                        <ul class="list-disc pl-6 space-y-1">
+                            <li>90%+ — Master Escapist</li>
+                            <li>70–89% — Skilled Agent</li>
+                            <li>50–69% — Apprentice</li>
+                            <li>Below 50% — Still Locked In</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">📥 Download Intel</h3>
+                    <p class="leading-relaxed" style="color:var(--text-dim);">
+                        The <strong style="color:var(--accent);">Download Intel</strong> button exports a JSON performance report containing the student's name,
+                        date, total questions, score, total time, accuracy, total hints used and detailed performance for each room.
+                    </p>
+                    <p class="leading-relaxed mt-3" style="color:var(--text-dim);">
+                        Per-question data includes the faulty sentence, target correction, student's final answer, number of attempts, hints used,
+                        whether the item was solved independently and time spent.
+                    </p>
+                </section>
+
+                <section class="panel p-5">
+                    <h3 class="typewriter-font text-lg mb-3 glow-amber">🔄 New Mission</h3>
+                    <p class="leading-relaxed" style="color:var(--text-dim);">
+                        The <strong style="color:var(--accent);">New Mission</strong> button returns to the setup screen only after the correct Gamemaster restart code is entered.
+                        This prevents accidental loss of the completed result screen.
+                    </p>
+                </section>
+
+            </div>
+
+            <div class="p-5 md:p-6 flex justify-end" style="border-top:1px solid rgba(34,211,238,0.12);">
+                <button id="btn-close-help-bottom" type="button" class="btn-primary">Close HELP</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ SCREEN 2: GAMEPLAY ════════════════ -->
+    <div id="screen-game" class="hidden fade-in">
+        <!-- Top bar -->
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+            <div class="flex gap-2">
+                <div class="stat-badge glow-text">⚡ <span id="ui-score">0</span> pts</div>
+                <div class="stat-badge" style="color: var(--text-dim);">⏱ <span id="ui-time">00:00</span></div>
+            </div>
+            <div class="typewriter-font text-sm" style="color: var(--text-dim);">
+                Room <span id="ui-q-current" class="glow-text" style="color:var(--accent);">1</span>
+                <span style="opacity:0.4;">of</span>
+                <span id="ui-q-total">10</span>
+            </div>
+        </div>
+
+        <!-- Room progress -->
+        <div class="room-track mb-5" id="room-track"></div>
+
+        <!-- Main panel -->
+        <div class="panel p-6 md:p-8">
+            <!-- Lock for this room -->
+            <div class="lock-icon mb-3" id="room-lock">
+                <div class="lock-shackle" id="room-shackle"></div>
+                <div class="lock-body" id="room-lock-body"></div>
+            </div>
+
+            <p class="text-center text-xs uppercase tracking-widest mb-4 typewriter-font" style="color: var(--glow-red);">
+                🔒 Decode the error to unlock this room
+            </p>
+
+            <!-- Question -->
+            <div class="question-cell mb-6">
+                <p id="question-text" class="text-xl md:text-2xl text-center" style="color: var(--text-primary); font-family: 'Special Elite', cursive; line-height: 1.6;"></p>
+            </div>
+
+            <!-- Teacher panel -->
+            <div id="teacher-panel" class="teacher-panel hidden mb-5">
+                <p class="text-xs uppercase tracking-wider mb-1 font-bold" style="color:#a78bfa;">Gamemaster Intel:</p>
+                <p><strong>Correct:</strong> <span id="teacher-correct"></span></p>
+                <p><strong>H1:</strong> <span id="teacher-hint1"></span></p>
+                <p><strong>H2:</strong> <span id="teacher-hint2"></span></p>
+            </div>
+
+            <!-- Answer input -->
+            <div class="mb-5">
+                <label class="block text-xs uppercase tracking-wider mb-2 typewriter-font" style="color: var(--text-dim);">Your Correction:</label>
+                <textarea id="answer-input" rows="2" placeholder="Type the corrected sentence to crack the lock..." class="escape-input" style="font-size:18px; resize:none;"></textarea>
+            </div>
+
+            <!-- Action buttons -->
+            <div class="flex gap-3 mb-5">
+                <button id="btn-submit" class="btn-primary flex-1">
+                    ⚡ Attempt Unlock
+                </button>
+                <button id="btn-next" class="btn-primary btn-next flex-1 hidden">
+                    Next Room →
+                </button>
+            </div>
+
+            <!-- Feedback -->
+            <div id="feedback-area" class="feedback hidden mb-5"></div>
+
+            <!-- Hints -->
+            <div style="border-top: 1px solid rgba(34,211,238,0.08);" class="pt-5">
+                <p class="text-center text-xs uppercase tracking-widest mb-3 typewriter-font" style="color: var(--text-dim);">
+                    🗝️ Clues (cost energy)
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3">
+                    <button id="btn-hint-1" class="btn-hint">
+                        <span>Clue 1</span><br>
+                        <span style="font-size:11px;opacity:0.6;">−1 ⚡</span>
+                    </button>
+                    <button id="btn-hint-2" class="btn-hint" disabled>
+                        <span>Clue 2</span><br>
+                        <span style="font-size:11px;opacity:0.6;">−1 ⚡</span>
+                    </button>
+                    <button id="btn-hint-3" class="btn-hint btn-reveal" disabled>
+                        <span>Force Open</span><br>
+                        <span style="font-size:11px;opacity:0.6;">−2 ⚡</span>
+                    </button>
+                </div>
+                <div id="hint-display" class="hint-box mt-4 hidden typewriter-font text-sm"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ════════════════ SCREEN 3: RESULTS ════════════════ -->
+    <div id="screen-result" class="hidden fade-in">
+        <div class="certificate p-8 md:p-10 text-center" style="position:relative; z-index:1;">
+            <div style="position:relative; z-index:2;">
+                <div id="result-lock-icon" class="lock-icon mb-2">
+                    <div class="lock-shackle unlocked"></div>
+                    <div class="lock-body unlocked"></div>
+                </div>
+
+                <p class="typewriter-font text-xs uppercase tracking-widest mb-1" style="color: var(--accent);">
+                    Escape Certificate
+                </p>
+                <h2 class="title-font text-3xl md:text-4xl glow-text mb-1" style="color:var(--accent);" id="cert-name">Agent</h2>
+                <p class="text-sm mb-8" style="color: var(--text-dim);">has escaped the Grammar Dungeon.</p>
+
+                <div class="grid grid-cols-2 gap-4 mb-8 max-w-sm mx-auto">
+                    <div class="panel p-4 text-center">
+                        <p class="text-xs uppercase tracking-wider" style="color:var(--text-dim);">Energy</p>
+                        <p class="text-3xl font-black glow-text" style="color:var(--accent);" id="cert-score">0</p>
+                    </div>
+                    <div class="panel p-4 text-center">
+                        <p class="text-xs uppercase tracking-wider" style="color:var(--text-dim);">Time</p>
+                        <p class="text-3xl font-black" id="cert-time">00:00</p>
+                    </div>
+                    <div class="panel p-4 text-center">
+                        <p class="text-xs uppercase tracking-wider" style="color:var(--text-dim);">Accuracy</p>
+                        <p class="text-xl font-bold" id="cert-accuracy">0%</p>
+                    </div>
+                    <div class="panel p-4 text-center">
+                        <p class="text-xs uppercase tracking-wider" style="color:var(--text-dim);">Clues Used</p>
+                        <p class="text-xl font-bold" id="cert-hints">0</p>
+                    </div>
+                </div>
+
+                <!-- Rank badge -->
+                <div class="mb-8">
+                    <p class="text-xs uppercase tracking-wider mb-2" style="color:var(--text-dim);">Escape Rank</p>
+                    <p id="cert-rank" class="title-font text-2xl glow-green">—</p>
+                </div>
+
+                <div class="flex gap-4 justify-center flex-wrap">
+                    <button id="btn-download" class="btn-primary">
+                        📥 Download Intel
+                    </button>
+                </div>
+
+                <div style="border-top: 1px solid rgba(34,211,238,0.1);" class="pt-5 mt-6 max-w-xs mx-auto w-full">
+                    <label class="block text-xs uppercase tracking-wider mb-2 typewriter-font" style="color:#475569;">Gamemaster code required to restart</label>
+                    <input type="password" id="restart-password" placeholder="Enter code..." class="escape-input text-sm text-center mb-3">
+                    <button id="btn-restart" class="btn-primary w-full" style="border-color: rgba(148,163,184,0.3); color: var(--text-dim);">
+                        🔄 New Mission
+                    </button>
+                    <p id="restart-error" class="text-xs text-center mt-2 hidden" style="color: var(--glow-red);">❌ Incorrect code, agent.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- ════════════════ JAVASCRIPT ════════════════ -->
+<script>
+    // ── PARTICLES ──
+    (function createParticles() {
+        const canvas = document.getElementById('bg-canvas');
+        for (let i = 0; i < 30; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            p.style.left = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 6 + 's';
+            p.style.animationDuration = (4 + Math.random() * 4) + 's';
+            const colors = ['#22d3ee', '#8b5cf6', '#39ff14', '#ffbf00'];
+            p.style.background = colors[Math.floor(Math.random() * colors.length)];
+            p.style.width = (1 + Math.random() * 2) + 'px';
+            p.style.height = p.style.width;
+            canvas.appendChild(p);
+        }
+    })();
+
+    // ── SPARKLE EFFECT ──
+    function spawnSparkles(count = 25) {
+        const container = document.getElementById('sparkle-container');
+        const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+        for (let i = 0; i < count; i++) {
+            const s = document.createElement('div');
+            s.className = 'sparkle';
+            const angle = (Math.PI * 2 * i) / count;
+            const dist = 80 + Math.random() * 160;
+            s.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+            s.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+            s.style.left = cx + 'px';
+            s.style.top = cy + 'px';
+            const colors = ['#39ff14', '#22d3ee', '#ffbf00', '#fff'];
+            s.style.background = colors[Math.floor(Math.random() * colors.length)];
+            s.style.boxShadow = `0 0 6px ${s.style.background}`;
+            container.appendChild(s);
+            setTimeout(() => s.remove(), 1100);
+        }
+    }
+
+    // ── GAME STATE ──
+    let allQuestions = [];
+    let gameQuestions = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    let timeElapsed = 0;
+    let timerInterval = null;
+    let studentName = '';
+    let isTeacherMode = false;
+
+    let performanceData = [];
+    let currentQAttempts = 0;
+    let currentQHintsUsed = 0;
+    let totalHintsUsedGlobally = 0;
+    let startTimeForQuestion = 0;
+
+    // Track room outcomes: 'pending', 'solved', 'failed'
+    let roomOutcomes = [];
+
+    // ── UI ELEMENTS ──
+    const screens = {
+        setup: document.getElementById('screen-setup'),
+        game: document.getElementById('screen-game'),
+        result: document.getElementById('screen-result')
+    };
+
+    const fileInput = document.getElementById('json-upload');
+    const nameInput = document.getElementById('student-name');
+    const rangeStartInput = document.getElementById('range-start');
+    const rangeEndInput = document.getElementById('range-end');
+    const startBtn = document.getElementById('btn-start');
+    const setupError = document.getElementById('setup-error');
+    const teacherPasswordInput = document.getElementById('teacher-password');
+
+    // ── HELP MENU ──
+    const helpModal = document.getElementById('help-modal');
+    const helpOpenBtn = document.getElementById('btn-help');
+    const helpCloseBtn = document.getElementById('btn-close-help');
+    const helpCloseBottomBtn = document.getElementById('btn-close-help-bottom');
+
+    function openHelpMenu() {
+        helpModal.classList.remove('hidden');
+        helpModal.classList.add('flex');
+    }
+
+    function closeHelpMenu() {
+        helpModal.classList.add('hidden');
+        helpModal.classList.remove('flex');
+    }
+
+    helpOpenBtn.addEventListener('click', openHelpMenu);
+    helpCloseBtn.addEventListener('click', closeHelpMenu);
+    helpCloseBottomBtn.addEventListener('click', closeHelpMenu);
+
+    helpModal.addEventListener('click', (e) => {
+        if (e.target === helpModal) closeHelpMenu();
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !helpModal.classList.contains('hidden')) {
+            closeHelpMenu();
+        }
+    });
+
+    // ── PASSWORD-PROTECTED JSON GENERATOR PROMPT ──
+    const JSON_GENERATOR_PROMPT = `Act as an expert English language teacher and linguistic analyst specializing in teaching English to native Hungarian speakers.
+
+I need you to generate a JSON file containing EXACTLY 30 English sentences that contain typical grammatical, lexical, or structural mistakes commonly made by Hungarian students.
+
+Target Level: [INSERT LEVEL]
+
+Grammar Focus Area: [INSERT FOCUS AREA]
+
+Please consider typical Hungarian interferences such as:
+
+Dropping the 's' in 3rd person singular.
+
+Confusion between Past Simple and Present Perfect.
+
+Misuse of prepositions (e.g., "depend of" instead of "depend on", "good in" instead of "good at").
+
+Word order issues (e.g., placing adverbs incorrectly, inverted word order in indirect questions).
+
+Misuse of articles (leaving them out or overusing "the").
+
+False friends or direct Hungarian-to-English translations (e.g., "I learn in the university" instead of "I study at university").
+
+Lexical / word-choice errors.
+
+Countable / uncountable noun errors.
+
+Provide the output strictly as a single JSON array of objects. Do not include any markdown formatting around the JSON, no explanations, just the raw JSON.
+
+Each object in the array must have the following exact keys and format:
+
+{
+
+"id": 1,
+
+"incorrect": "The sentence containing the typical Hungarian mistake.",
+
+"correct": "The grammatically perfect, corrected sentence.",
+
+"hint1": "A gentle hint pointing out the location or type of the mistake (e.g., 'Check the preposition used after the verb.'). Do not give the exact answer.",
+
+"hint2": "A stronger, more explicit grammatical hint explaining the rule (e.g., 'The verb depend is always followed by the preposition ON.'). Do not give the exact answer."
+
+}
+
+Ensure there are exactly 30 items in the array. Ensure that the "correct" sentence is written with proper capitalization and punctuation (ending with a period, question mark, or exclamation mark).`;
+    const PROMPT_PASSWORD = '1964';
+
+    const promptAccessBtn = document.getElementById('btn-prompt-access');
+    const promptPasswordModal = document.getElementById('prompt-password-modal');
+    const promptPasswordInput = document.getElementById('prompt-password-input');
+    const promptPasswordError = document.getElementById('prompt-password-error');
+    const unlockPromptBtn = document.getElementById('btn-unlock-prompt');
+    const closePromptPasswordBtn = document.getElementById('btn-close-prompt-password');
+
+    const jsonPromptModal = document.getElementById('json-prompt-modal');
+    const jsonPromptText = document.getElementById('json-generator-prompt-text');
+    const copyPromptBtn = document.getElementById('btn-copy-prompt');
+    const promptCopyStatus = document.getElementById('prompt-copy-status');
+    const closeJsonPromptBtn = document.getElementById('btn-close-json-prompt');
+    const closeJsonPromptBottomBtn = document.getElementById('btn-close-json-prompt-bottom');
+
+    function openPromptPasswordModal() {
+        promptPasswordInput.value = '';
+        promptPasswordError.classList.add('hidden');
+        promptPasswordModal.classList.remove('hidden');
+        promptPasswordModal.classList.add('flex');
+        setTimeout(() => promptPasswordInput.focus(), 50);
+    }
+
+    function closePromptPasswordModal() {
+        promptPasswordModal.classList.add('hidden');
+        promptPasswordModal.classList.remove('flex');
+        promptPasswordInput.value = '';
+        promptPasswordError.classList.add('hidden');
+    }
+
+    function openJsonPromptMenu() {
+        closePromptPasswordModal();
+        jsonPromptText.textContent = JSON_GENERATOR_PROMPT;
+        promptCopyStatus.classList.add('hidden');
+        jsonPromptModal.classList.remove('hidden');
+        jsonPromptModal.classList.add('flex');
+    }
+
+    function closeJsonPromptMenu() {
+        jsonPromptModal.classList.add('hidden');
+        jsonPromptModal.classList.remove('flex');
+    }
+
+    function tryUnlockPrompt() {
+        if (promptPasswordInput.value === PROMPT_PASSWORD) {
+            openJsonPromptMenu();
+        } else {
+            promptPasswordError.classList.remove('hidden');
+            promptPasswordInput.select();
+        }
+    }
+
+    promptAccessBtn.addEventListener('click', openPromptPasswordModal);
+    unlockPromptBtn.addEventListener('click', tryUnlockPrompt);
+    closePromptPasswordBtn.addEventListener('click', closePromptPasswordModal);
+    closeJsonPromptBtn.addEventListener('click', closeJsonPromptMenu);
+    closeJsonPromptBottomBtn.addEventListener('click', closeJsonPromptMenu);
+
+    promptPasswordInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') tryUnlockPrompt();
+    });
+
+    promptPasswordModal.addEventListener('click', (e) => {
+        if (e.target === promptPasswordModal) closePromptPasswordModal();
+    });
+
+    jsonPromptModal.addEventListener('click', (e) => {
+        if (e.target === jsonPromptModal) closeJsonPromptMenu();
+    });
+
+    copyPromptBtn.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(JSON_GENERATOR_PROMPT);
+        } catch (err) {
+            const temp = document.createElement('textarea');
+            temp.value = JSON_GENERATOR_PROMPT;
+            temp.style.position = 'fixed';
+            temp.style.opacity = '0';
+            document.body.appendChild(temp);
+            temp.select();
+            document.execCommand('copy');
+            temp.remove();
+        }
+        promptCopyStatus.classList.remove('hidden');
+        setTimeout(() => promptCopyStatus.classList.add('hidden'), 1800);
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (!promptPasswordModal.classList.contains('hidden')) closePromptPasswordModal();
+            if (!jsonPromptModal.classList.contains('hidden')) closeJsonPromptMenu();
+        }
+    });
+
+    const uiScore = document.getElementById('ui-score');
+    const uiTime = document.getElementById('ui-time');
+    const uiQCurrent = document.getElementById('ui-q-current');
+    const uiQTotal = document.getElementById('ui-q-total');
+    const questionText = document.getElementById('question-text');
+    const answerInput = document.getElementById('answer-input');
+    const submitBtn = document.getElementById('btn-submit');
+    const nextBtn = document.getElementById('btn-next');
+    const feedbackArea = document.getElementById('feedback-area');
+
+    const hint1Btn = document.getElementById('btn-hint-1');
+    const hint2Btn = document.getElementById('btn-hint-2');
+    const hint3Btn = document.getElementById('btn-hint-3');
+    const hintDisplay = document.getElementById('hint-display');
+
+    const teacherPanel = document.getElementById('teacher-panel');
+    const teacherCorrect = document.getElementById('teacher-correct');
+    const teacherHint1 = document.getElementById('teacher-hint1');
+    const teacherHint2 = document.getElementById('teacher-hint2');
+
+    const roomTrack = document.getElementById('room-track');
+
+    // ── FILE UPLOAD ──
+    fileInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                allQuestions = JSON.parse(event.target.result);
+                if (!Array.isArray(allQuestions) || allQuestions.length === 0) {
+                    throw new Error("Invalid JSON format. Expected an array.");
+                }
+                if (!allQuestions[0].incorrect || !allQuestions[0].correct) {
+                    throw new Error("Missing 'incorrect' or 'correct' fields.");
+                }
+                rangeStartInput.max = allQuestions.length;
+                rangeEndInput.max = allQuestions.length;
+                rangeEndInput.value = Math.min(10, allQuestions.length);
+                setupError.classList.add('hidden');
+            } catch (err) {
+                setupError.textContent = "⚠ " + err.message;
+                setupError.classList.remove('hidden');
+                fileInput.value = '';
+                allQuestions = [];
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // ── START GAME ──
+    startBtn.addEventListener('click', () => {
+        studentName = nameInput.value.trim();
+        if (!studentName) { showSetupError("Enter your codename, agent."); return; }
+        if (allQuestions.length === 0) { showSetupError("Upload a mission file first."); return; }
+
+        let startIdx = parseInt(rangeStartInput.value);
+        let endIdx = parseInt(rangeEndInput.value);
+        if (isNaN(startIdx) || isNaN(endIdx) || startIdx < 1 || endIdx > allQuestions.length || startIdx > endIdx) {
+            showSetupError(`Valid range: 1 to ${allQuestions.length}.`);
+            return;
+        }
+
+        gameQuestions = allQuestions.slice(startIdx - 1, endIdx);
+        isTeacherMode = (teacherPasswordInput.value === 'Silentknight64');
+
+        currentQuestionIndex = 0;
+        score = 0;
+        timeElapsed = 0;
+        performanceData = [];
+        totalHintsUsedGlobally = 0;
+        roomOutcomes = gameQuestions.map(() => 'pending');
+        updateScoreUI();
+
+        screens.setup.classList.add('hidden');
+        screens.game.classList.remove('hidden');
+        screens.game.classList.add('fade-in');
+        uiQTotal.textContent = gameQuestions.length;
+
+        buildRoomTrack();
+        startTimer();
+        loadQuestion();
+    });
+
+    function showSetupError(msg) {
+        setupError.textContent = msg;
+        setupError.classList.remove('hidden');
+    }
+
+    // ── ROOM TRACK (doors) ──
+    function buildRoomTrack() {
+        roomTrack.innerHTML = '';
+        gameQuestions.forEach((_, i) => {
+            const dot = document.createElement('div');
+            dot.className = 'room-dot';
+            dot.title = `Room ${i + 1}`;
+            roomTrack.appendChild(dot);
+        });
+        updateRoomTrack();
+    }
+
+    function updateRoomTrack() {
+        const dots = roomTrack.children;
+        for (let i = 0; i < dots.length; i++) {
+            dots[i].className = 'room-dot';
+            if (roomOutcomes[i] === 'solved') dots[i].classList.add('solved');
+            else if (roomOutcomes[i] === 'failed') dots[i].classList.add('failed');
+            if (i === currentQuestionIndex) dots[i].classList.add('active');
+        }
+    }
+
+    // ── TIMER ──
+    function startTimer() {
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => { timeElapsed++; updateTimeUI(); }, 1000);
+    }
+    function updateTimeUI() {
+        const m = Math.floor(timeElapsed / 60).toString().padStart(2, '0');
+        const s = (timeElapsed % 60).toString().padStart(2, '0');
+        uiTime.textContent = `${m}:${s}`;
+    }
+    function updateScoreUI() {
+        uiScore.textContent = score;
+    }
+
+    // ── LOAD QUESTION ──
+    function loadQuestion() {
+        const q = gameQuestions[currentQuestionIndex];
+        uiQCurrent.textContent = currentQuestionIndex + 1;
+        questionText.textContent = q.incorrect;
+
+        // Reset lock visual
+        document.getElementById('room-shackle').classList.remove('unlocked');
+        document.getElementById('room-lock-body').classList.remove('unlocked');
+
+        answerInput.value = '';
+        answerInput.disabled = false;
+        answerInput.focus();
+
+        currentQAttempts = 0;
+        currentQHintsUsed = 0;
+        startTimeForQuestion = Date.now();
+
+        submitBtn.classList.remove('hidden');
+        nextBtn.classList.add('hidden');
+        hideFeedback();
+
+        if (isTeacherMode) {
+            teacherPanel.classList.remove('hidden');
+            teacherCorrect.textContent = q.correct;
+            teacherHint1.textContent = q.hint1;
+            teacherHint2.textContent = q.hint2;
+            nextBtn.classList.remove('hidden');
+        } else {
+            teacherPanel.classList.add('hidden');
+        }
+
+        hint1Btn.disabled = false;
+        hint2Btn.disabled = true;
+        hint3Btn.disabled = true;
+        hintDisplay.classList.add('hidden');
+        hintDisplay.innerHTML = '';
+
+        updateRoomTrack();
+    }
+
+    // ── CLEAN STRING ──
+    function cleanString(str) {
+        return str.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.!?]+$/, '');
+    }
+
+    // ── SUBMIT ──
+    submitBtn.addEventListener('click', () => {
+        const userText = answerInput.value;
+        if (!userText.trim()) return;
+        currentQAttempts++;
+        const q = gameQuestions[currentQuestionIndex];
+        if (cleanString(userText) === cleanString(q.correct)) {
+            handleCorrectAnswer(userText);
+        } else {
+            handleIncorrectAnswer();
+        }
+    });
+
+    answerInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); submitBtn.click(); }
+    });
+
+    function handleCorrectAnswer(finalText) {
+        score += 1;
+        updateScoreUI();
+        roomOutcomes[currentQuestionIndex] = 'solved';
+        updateRoomTrack();
+
+        // Unlock animation
+        document.getElementById('room-shackle').classList.add('unlocked');
+        document.getElementById('room-lock-body').classList.add('unlocked');
+        document.getElementById('room-lock').classList.add('unlock-burst');
+        setTimeout(() => document.getElementById('room-lock').classList.remove('unlock-burst'), 600);
+
+        spawnSparkles(30);
+        showFeedback('🔓 Room unlocked! Brilliant work, agent.', 'success');
+        answerInput.disabled = true;
+        submitBtn.classList.add('hidden');
+        nextBtn.classList.remove('hidden');
+        hint1Btn.disabled = true;
+        hint2Btn.disabled = true;
+        hint3Btn.disabled = true;
+        recordQuestionPerformance(true, finalText);
+    }
+
+    function handleIncorrectAnswer() {
+        score -= 1;
+        updateScoreUI();
+        showFeedback('❌ Lock resisted. Try again, agent...', 'error');
+        answerInput.classList.add('shake');
+        setTimeout(() => answerInput.classList.remove('shake'), 500);
+    }
+
+    // ── HINTS ──
+    hint1Btn.addEventListener('click', () => { useHint(1); hint1Btn.disabled = true; hint2Btn.disabled = false; });
+    hint2Btn.addEventListener('click', () => { useHint(2); hint2Btn.disabled = true; hint3Btn.disabled = false; });
+    hint3Btn.addEventListener('click', () => {
+        useHint(3);
+        hint3Btn.disabled = true;
+        const q = gameQuestions[currentQuestionIndex];
+        answerInput.value = q.correct;
+        showFeedback('🔑 Lock forced open. Study the code carefully.', 'warning');
+        answerInput.disabled = true;
+        submitBtn.classList.add('hidden');
+        nextBtn.classList.remove('hidden');
+        roomOutcomes[currentQuestionIndex] = 'failed';
+        updateRoomTrack();
+
+        // Unlock animation (forced)
+        document.getElementById('room-shackle').classList.add('unlocked');
+        document.getElementById('room-lock-body').classList.add('unlocked');
+
+        recordQuestionPerformance(false, q.correct);
+    });
+
+    function useHint(level) {
+        currentQHintsUsed = level;
+        totalHintsUsedGlobally++;
+        const q = gameQuestions[currentQuestionIndex];
+        let penalty = (level === 3) ? 2 : 1;
+        score -= penalty;
+        updateScoreUI();
+        hintDisplay.classList.remove('hidden');
+        if (level === 1) {
+            hintDisplay.innerHTML = `<strong>🗝 Clue 1:</strong> ${q.hint1}`;
+        } else if (level === 2) {
+            hintDisplay.innerHTML = `<strong>🗝 Clue 1:</strong> ${q.hint1}<br><strong style="margin-top:6px;display:block;">🗝 Clue 2:</strong> ${q.hint2}`;
+        } else if (level === 3) {
+            hintDisplay.innerHTML = `<strong>🔑 Code revealed.</strong> The answer has been filled in.`;
+        }
+    }
+
+    // ── NEXT ──
+    nextBtn.addEventListener('click', () => {
+        currentQuestionIndex++;
+        if (currentQuestionIndex < gameQuestions.length) {
+            loadQuestion();
+        } else {
+            endGame();
+        }
+    });
+
+    // ── PERFORMANCE ──
+    function recordQuestionPerformance(isCorrect, finalUserAnswer) {
+        const timeSpent = Math.floor((Date.now() - startTimeForQuestion) / 1000);
+        const q = gameQuestions[currentQuestionIndex];
+        performanceData.push({
+            questionId: q.id || (currentQuestionIndex + 1),
+            incorrectSentence: q.incorrect,
+            targetCorrectSentence: q.correct,
+            studentFinalAnswer: finalUserAnswer,
+            attempts: currentQAttempts,
+            hintsUsed: currentQHintsUsed,
+            solvedIndependently: isCorrect,
+            timeSpentSeconds: timeSpent
+        });
+    }
+
+    // ── FEEDBACK ──
+    function showFeedback(msg, type) {
+        feedbackArea.innerHTML = msg;
+        feedbackArea.className = 'feedback typewriter-font';
+        if (type === 'success') feedbackArea.classList.add('feedback-success');
+        else if (type === 'error') feedbackArea.classList.add('feedback-error');
+        else if (type === 'warning') feedbackArea.classList.add('feedback-warning');
+    }
+    function hideFeedback() { feedbackArea.className = 'feedback hidden'; }
+
+    // ── END GAME ──
+    function endGame() {
+        clearInterval(timerInterval);
+        screens.game.classList.add('hidden');
+        screens.result.classList.remove('hidden');
+        screens.result.classList.add('fade-in');
+
+        const independentlySolved = performanceData.filter(p => p.solvedIndependently).length;
+        const accuracy = Math.round((independentlySolved / gameQuestions.length) * 100);
+
+        document.getElementById('cert-name').textContent = studentName;
+        document.getElementById('cert-score').textContent = score;
+        document.getElementById('cert-time').textContent = uiTime.textContent;
+        document.getElementById('cert-accuracy').textContent = `${independentlySolved}/${gameQuestions.length} (${accuracy}%)`;
+        document.getElementById('cert-hints').textContent = totalHintsUsedGlobally;
+
+        // Rank
+        let rank = '';
+        if (accuracy >= 90) rank = '🏆 Master Escapist';
+        else if (accuracy >= 70) rank = '🥈 Skilled Agent';
+        else if (accuracy >= 50) rank = '🥉 Apprentice';
+        else rank = '🔒 Still Locked In';
+        document.getElementById('cert-rank').textContent = rank;
+
+        // Victory sparkles
+        if (accuracy >= 70) {
+            spawnSparkles(40);
+            setTimeout(() => spawnSparkles(25), 400);
+        }
+    }
+
+    // ── DOWNLOAD ──
+    document.getElementById('btn-download').addEventListener('click', () => {
+        const independentlySolved = performanceData.filter(p => p.solvedIndependently).length;
+        const finalReport = {
+            studentName,
+            date: new Date().toISOString(),
+            totalQuestions: gameQuestions.length,
+            finalScore: score,
+            totalTimeSeconds: timeElapsed,
+            accuracyPercentage: Math.round((independentlySolved / gameQuestions.length) * 100),
+            totalHintsUsed: totalHintsUsedGlobally,
+            detailedPerformance: performanceData
+        };
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(finalReport, null, 2));
+        const a = document.createElement('a');
+        a.href = dataStr;
+        a.download = `escape_${studentName.replace(/\s+/g, '_')}_${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    });
+
+    // ── RESTART ──
+    document.getElementById('btn-restart').addEventListener('click', () => {
+        const code = document.getElementById('restart-password').value;
+        const err = document.getElementById('restart-error');
+        if (code !== 'Silentknight64') {
+            err.classList.remove('hidden');
+            document.getElementById('restart-password').classList.add('shake');
+            setTimeout(() => document.getElementById('restart-password').classList.remove('shake'), 500);
+            return;
+        }
+        err.classList.add('hidden');
+        document.getElementById('restart-password').value = '';
+        screens.result.classList.add('hidden');
+        screens.setup.classList.remove('hidden');
+        teacherPasswordInput.value = '';
+    });
+</script>
+</body>
+</html>
